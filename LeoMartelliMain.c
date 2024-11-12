@@ -5,17 +5,22 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define qntd_blocos 13
+#define tf_bloco 4096
+
 typedef struct sBloco {
-    long int endereco;
-    int status; // 1 -> ocupado, 0 -> livre 
+    // long int endereco;
+    // int status; // 1 -> ocupado, 0 -> livre
+    // alterar pra mapa/lista de bits
+    char dados[tf_bloco];
 } BLOCO;
 
 typedef struct sInode {
     int id;
     char tipo[1]; // D -> diretório, A -> arquivos diversos
     char descricao[100];
-    long int tamanho;
-    BLOCO blocos[50];
+    // int num_blocos;
+    BLOCO blocos[qntd_blocos];
 } INODE;
 
 typedef struct sFilaInode {
