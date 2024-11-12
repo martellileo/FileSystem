@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define qntd_blocos 13
+#define qntd_blocos 10
 #define tf_bloco 4096
 
 typedef struct sBloco {
