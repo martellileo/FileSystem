@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MAX_BLOCOS 50
-#define TAM_BLOCO 256
+#define MAX_BLOCOS 13
+#define TAM_BLOCO 4096
 #define NOME_ARQUIVO "sistema_arquivo.dat"
 
 typedef struct sBloco {
@@ -14,7 +14,7 @@ typedef struct sInode {
     int numero;
     char descricao[100];
     BLOCO blocos[MAX_BLOCOS];
-    int num_blocos; // Número de blocos usados
+    int num_blocos; //qntd blocos usados
 } INODE;
 
 typedef struct sFilaInode {
@@ -39,7 +39,8 @@ void proximaAcao(char *comando, char *destino) {
             destino[0] = '\0'; // vazio se nao tiver nada depois do espaco
         }
     } else {
-        comando[0] = '\0'; // nao tem string = nao tem token
+        // nao tem string = nao tem token
+        comando[0] = '\0';
         destino[0] = '\0';
     }
 }
@@ -55,14 +56,13 @@ void criarArquivo(char *nome) {
     strcpy(inode.descricao, nome);
     inode.num_blocos = 0;
 
-    // Inicializa os blocos
+    // init blocos
     for (int i = 0; i < MAX_BLOCOS; i++) {
         memset(inode.blocos[i].dados, 0, TAM_BLOCO);
     }
 
     fwrite(&inode, sizeof(INODE), 1, file);
     fclose(file);
-    printf("Arquivo '%s' criado com sucesso!\n", nome);
 }
 
 void listarArquivos() {
@@ -70,20 +70,14 @@ void listarArquivos() {
     if (file == NULL) {
         perror("Erro ao abrir o arquivo");
         return;
+    } else {
+        INODE inode;
+        printf("Arquivos:\n");
+        while (fread(&inode, sizeof(INODE), 1, file)) {
+            printf("Arquivo: %s\n", inode.descricao);
+        }
+        fclose(file);
     }
-
-    INODE inode;
-    printf("Arquivos:\n");
-    while (fread(&inode, sizeof(INODE), 1, file)) {
-        printf("Arquivo: %s\n", inode.descricao);
-    }
-    fclose(file);
-}
-
-void removerArquivo(char *nome) {
-    // Remover arquivo não é trivial sem uma estrutura de dados mais complexa.
-    // Para simplificação, apenas informamos que a remoção não é implementada.
-    printf("Remoção de arquivo não implementada ainda.\n");
 }
 
 int main() {
