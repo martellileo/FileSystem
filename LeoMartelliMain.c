@@ -28,19 +28,19 @@ typedef struct sFilaInode {
     INODE *prev;
 } FILA;
 
-// preciso trocar isso aqui pra funcionar com a fila de inodes 
-void terminalChar(char destino[]){ 
+// preciso trocar isso aqui pra funcionar com a fila de inodes
+void terminalChar(char destino[]){
     printf("%s > ", destino);
 }
 
 void proximaAcao(char *comando[], char *destino[]){
     char leitura[50];
     scanf(" %[^\n]", &leitura);
-    
+
     // separa a string em tokens
-    char *token = strtok(leitura, " "); 
+    char *token = strtok(leitura, " ");
     if (token != NULL) {
-        strcpy(comando, token); 
+        strcpy(comando, token);
         token = strtok(NULL, " "); // primeiro token vira comando
         if (token != NULL) {
             strcpy(destino, token); // segundo token vira destino
@@ -49,33 +49,35 @@ void proximaAcao(char *comando[], char *destino[]){
         }
     } else {
         // nao tem string = nao tem token
-        comando[0] = '\0'; 
+        comando[0] = '\0';
         destino[0] = '\0';
     }
 }
 
-// salvar bloco em .dat se não existir
-void criarDAT(BLOCO bloco) {
+// Salvar bloco em .dat se não existir
+void criarDAT(BLOCO bloco, int i) {
     char nomeBloco[30];
-    sprintf(nomeBloco, "blocos/bloco_%ld.dat", bloco.endereco);
+    sprintf(nomeBloco, "blocos/bloco_%d.dat", i);
 
     // tenta abrir em read
     FILE *file = fopen(nomeBloco, "rb");
     if (file != NULL) {
-        // Se o arquivo já existe, não sobrescreve
+        // se o arquivo já existe = mantem
         fclose(file);
         // testar
-        // printf("Bloco %ld ja existe.\n", bloco.endereco);
+        // printf("Bloco %d no arquivo: %s.\n", i, nomeBloco);
         return;
     }
 
-    // Cria o arquivo, pois ele não existe
+    // nao existe = cria
     file = fopen(nomeBloco, "wb");
     if (file != NULL) {
         fwrite(&bloco, sizeof(BLOCO), 1, file);
         fclose(file);
         // testar
-        // printf("Bloco %ld salvo em %s\n", bloco.endereco, nomeBloco);
+        // printf("bloco %d salvo em: %s.\n", i, nomeBloco);
+    } else {
+        // printf("Erro ao criar bloco\n");
     }
 }
 
@@ -84,15 +86,15 @@ void criarDAT(BLOCO bloco) {
 void inicializarBlocos() {
     // inicia bloco com endereco i e livre
     for (long int i = 1; i <= 60; i++) {
-        BLOCO bloco = {i, 0}; 
-        criarDAT(bloco);
+        BLOCO bloco = {0};
+        criarDAT(bloco, i);
     }
 }
 
 // inicializar o sistema
 void initSys(){
     // algoritmo pra verificar se existe a pasta blocos
-    struct stat st = {0}; 
+    struct stat st = {0};
 
     if (stat("blocos/", &st) == -1) {
         mkdir("blocos/");
@@ -115,32 +117,32 @@ int main(){
         printf("\n");
 
         if(strcmp(comando, "cd") == 0){ // cd
-            
-            strcpy(local, destino); 
+
+            strcpy(local, destino);
         }
         else if (strcmp(comando, "exit") == 0){ // saida
             saida = 1;
-        } 
+        }
         else if(strcmp(comando, "clear") == 0) { // limpar tela
             system("cls");
         }
         else if(strcmp(comando, "ls") == 0) { // listar arquivos
-            
+
         }
         else if(strcmp(comando, "cat") == 0) { // abrir arquivo
-            
+
         }
         else if(strcmp(comando, "rm") == 0) { // remover arquivo
-            
+
         }
         else if(strcmp(comando, "rmdir") == 0) { // remover diretorio
-            
+
         }
         else if(strcmp(comando, "mv") == 0) { // mover arquivo
-            
+
         }
         else if(strcmp(comando, "mkdir") == 0) { // criar diretorio
-            
+
         }
     } while (saida != 1);
 }
