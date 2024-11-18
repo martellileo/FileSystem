@@ -8,25 +8,39 @@
 #define qntd_blocos 10
 #define tf_bloco 4096
 
+// array de bits pra guardar o mapa
+unsigned char mapa_de_bits[(qntd_blocos + 7) / 8];
+
 typedef struct sBloco {
     // long int endereco;
     // int status; // 1 -> ocupado, 0 -> livre
     // alterar pra mapa/lista de bits
     char dados[tf_bloco];
-} BLOCO;
+} Bloco;
+
+typedef struct lBlocos {
+    // saber blocos livres
+    Bloco *bloco;
+    int status; // 1 -> ocupado, 0 -> livre
+    struct lBlocos *next;
+} ListaBlocos;
 
 typedef struct sInode {
     int id;
     char tipo[1]; // D -> diretório, A -> arquivos diversos
     char descricao[100];
     // int num_blocos;
-    BLOCO blocos[qntd_blocos];
-} INODE;
+    Bloco blocos[qntd_blocos];
+} INode;
 
-typedef struct sFilaInode {
-    INODE *next;
-    INODE *prev;
-} FILA;
+typedef struct lINode {
+    INode *inode;
+    struct lINode *next;
+} ListaINode;
+
+typedef struct sDiretorio {
+
+} Diretorio;
 
 // preciso trocar isso aqui pra funcionar com a fila de inodes
 void terminalChar(char destino[]){
@@ -55,7 +69,7 @@ void proximaAcao(char *comando[], char *destino[]){
 }
 
 // Salvar bloco em .dat se não existir
-void criarDAT(BLOCO bloco, int i) {
+void criarDAT(Bloco bloco, int i) {
     char nomeBloco[30];
     sprintf(nomeBloco, "blocos/bloco_%d.dat", i);
 
@@ -72,7 +86,7 @@ void criarDAT(BLOCO bloco, int i) {
     // nao existe = cria
     file = fopen(nomeBloco, "wb");
     if (file != NULL) {
-        fwrite(&bloco, sizeof(BLOCO), 1, file);
+        fwrite(&bloco, sizeof(Bloco), 1, file);
         fclose(file);
         // testar
         // printf("bloco %d salvo em: %s.\n", i, nomeBloco);
@@ -81,26 +95,55 @@ void criarDAT(BLOCO bloco, int i) {
     }
 }
 
-
-// init 60 blocos
+// init qntd_blocos
 void inicializarBlocos() {
     // inicia bloco com endereco i e livre
-    for (long int i = 1; i <= 60; i++) {
-        BLOCO bloco = {0};
+    for (long int i = 1; i <= qntd_blocos; i++) {
+        Bloco bloco = {0};
         criarDAT(bloco, i);
     }
+}
+// init mapa de bits, setando tudo livre
+void inicializarMapaDeBits() {
+    memset(mapa_de_bits, 0, sizeof(mapa_de_bits)); // Todos os bits serão 0 (blocos livres)
+}
+
+int alocarBloco() {
+    for (int i = 0; i < qntd_blocos; i++) {
+        // verifica se o bit ta livre -> == 0
+        if ((mapa_de_bits[i / 8] & (1 << (i % 8))) == 0) {
+            // aloca bloco como ocupado -> bit = 1
+            mapa_de_bits[i / 8] |= (1 << (i % 8));
+            return i; // retorna o i do bloco alocado
+        }
+    }
+    return -1; // tudo ocupado
+}
+
+void liberarBloco(int indice) {
+    if (indice >= 0 && indice < qntd_blocos) {
+        // aloca bloco como livre -> bit = 0
+        mapa_de_bits[indice / 8] &= ~(1 << (indice % 8));
+    }
+}
+
+int statusBloco(int indice) {
+    if (indice >= 0 && indice < qntd_blocos) {
+        return (mapa_de_bits[indice / 8] & (1 << (indice % 8))) != 0;
+    }
+    return -1; // valor nao encontrado no mapa
 }
 
 // inicializar o sistema
 void initSys(){
-    // algoritmo pra verificar se existe a pasta blocos
+    // algoritmo pra verificar se existe a pasta blocos -> entender no stackoverflow
     struct stat st = {0};
-
     if (stat("blocos/", &st) == -1) {
         mkdir("blocos/");
     }
 
-    // inicializar os blocos
+    // functions de init
+    inicializarMapaDeBits();
     inicializarBlocos();
 }
 
