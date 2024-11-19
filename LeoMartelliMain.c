@@ -5,17 +5,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define qntd_blocos 10
-#define tf_bloco 4096
+#define CLUSTER_B   128                                 // tamanho do cluster em bytes
+#define DISCO_B     8192                                // tamanho do disco em Bytes
+#define TOTAL_BLOCOS (DISCO_B / CLUSTER_B)              // calcula a quantidade de blocos
+#define MAX_ENTRADAS (CLUSTER_B /sizeof(Diretorio))     // calcula o maximo de entradas de diretório
 
-// array de bits pra guardar o mapa
-unsigned char mapa_de_bits[(qntd_blocos + 7) / 8];
+// variaveis globais
+unsigned char mapa_de_bits[(TOTAL_BLOCOS + 7) / 8]; // array de bits pra guardar o mapa
+ListaINode *lista_inodes = NULL; // lista global (sera q da bo)?
 
 typedef struct sBloco {
     // long int endereco;
     // int status; // 1 -> ocupado, 0 -> livre
     // alterar pra mapa/lista de bits
-    char dados[tf_bloco];
+    char dados[CLUSTER_B];
 } Bloco;
 
 typedef struct lBlocos {
@@ -30,7 +33,7 @@ typedef struct sInode {
     char tipo[1]; // D -> diretório, A -> arquivos diversos
     char descricao[100];
     // int num_blocos;
-    Bloco blocos[qntd_blocos];
+    Bloco blocos[TOTAL_BLOCOS];
 } INode;
 
 typedef struct lINode {
@@ -41,6 +44,27 @@ typedef struct lINode {
 typedef struct sDiretorio {
 
 } Diretorio;
+
+INode *criarINode(char *nome, char *tipo) {
+    INode *novo_inode = (INode *)malloc(sizeof(INode));
+    if (novo_inode == NULL) {
+        printf("Erro ao alocar memória para o inode.\n");
+        return NULL;
+    }
+    static int id_contador = 1; // ID único para cada inode
+    novo_inode->id = id_contador++;
+    strcpy(novo_inode->tipo, tipo);
+    snprintf(novo_inode->descricao, sizeof(novo_inode->descricao), "%s", nome);
+
+    return novo_inode;
+}
+
+void adicionarINodeNaLista(INode *inode) {
+    ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
+    novo->inode = inode;
+    novo->next = lista_inodes;
+    lista_inodes = novo;
+}
 
 // preciso trocar isso aqui pra funcionar com a fila de inodes
 void terminalChar(char destino[]){
@@ -68,7 +92,7 @@ void proximaAcao(char *comando[], char *destino[]){
     }
 }
 
-// Salvar bloco em .dat se não existir
+// salvar bloco em .dat
 void criarDAT(Bloco bloco, int i) {
     char nomeBloco[30];
     sprintf(nomeBloco, "blocos/bloco_%d.dat", i);
@@ -95,10 +119,10 @@ void criarDAT(Bloco bloco, int i) {
     }
 }
 
-// init qntd_blocos
+// init vlocos definidos pelo cluster
 void inicializarBlocos() {
     // inicia bloco com endereco i e livre
-    for (long int i = 1; i <= qntd_blocos; i++) {
+    for (long int i = 1; i <= TOTAL_BLOCOS; i++) {
         Bloco bloco = {0};
         criarDAT(bloco, i);
     }
@@ -109,7 +133,7 @@ void inicializarMapaDeBits() {
 }
 
 int alocarBloco() {
-    for (int i = 0; i < qntd_blocos; i++) {
+    for (int i = 0; i < TOTAL_BLOCOS; i++) {
         // verifica se o bit ta livre -> == 0
         if ((mapa_de_bits[i / 8] & (1 << (i % 8))) == 0) {
             // aloca bloco como ocupado -> bit = 1
@@ -121,18 +145,30 @@ int alocarBloco() {
 }
 
 void liberarBloco(int indice) {
-    if (indice >= 0 && indice < qntd_blocos) {
+    if (indice >= 0 && indice < TOTAL_BLOCOS) {
         // aloca bloco como livre -> bit = 0
         mapa_de_bits[indice / 8] &= ~(1 << (indice % 8));
     }
 }
 
 int statusBloco(int indice) {
-    if (indice >= 0 && indice < qntd_blocos) {
+    if (indice >= 0 && indice < TOTAL_BLOCOS) {
         return (mapa_de_bits[indice / 8] & (1 << (indice % 8))) != 0;
     }
     return -1; // valor nao encontrado no mapa
 }
+
+void mostrarMapaDeBits() {
+    printf("Mapa de Bits:\n");
+    for (int i = 0; i < TOTAL_BLOCOS; i++) {
+        printf("%d", (mapa_de_bits[i / 8] & (1 << (i % 8))) != 0);
+        if ((i + 1) % 8 == 0) {
+            printf(" ");
+        }
+    }
+    printf("\n");
+}
+
 
 // inicializar o sistema
 void initSys(){
@@ -186,6 +222,9 @@ int main(){
         }
         else if(strcmp(comando, "mkdir") == 0) { // criar diretorio
 
+        }
+        else if(strcmp(comando, "show") == 0) { // criar diretorio
+            mostrarMapaDeBits();
         }
     } while (saida != 1);
 }
