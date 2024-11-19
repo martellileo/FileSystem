@@ -10,7 +10,7 @@
 unsigned char mapa_de_bits[(TOTAL_BLOCOS + 7) / 8]; // array de bits pra guardar o mapa
 ListaINode *lista_inodes = NULL; // lista global (sera q da bo)?
 
-void mkdirBlocos(const char path[]){
+void createDirectory(const char path[]){
     // algoritmo pra verificar se existe a pasta blocos -> entender no stackoverflow
     struct stat st = {0};
     if (stat(path, &st) == -1) {
@@ -41,15 +41,16 @@ void addINodeLista(INode *inode) {
 
 // preciso trocar isso aqui pra funcionar com a fila de inodes
 void terminalChar(char destino[]){
-    printf("%s > ", destino);
+    printf("%s $ ", destino);
 }
 
-void proximaAcao(char *comando[], char *destino[]){
-    char leitura[50];
-    scanf(" %[^\n]", &leitura);
+void proximaAcao(char *comando[], char *destino[], char leitura[]){
+    char aux[50];
+    scanf(" %[^\n]", &aux);
+    strcpy(leitura, aux);
 
     // separa a string em tokens
-    char *token = strtok(leitura, " ");
+    char *token = strtok(aux, " ");
     if (token != NULL) {
         strcpy(comando, token);
         token = strtok(NULL, " "); // primeiro token vira comando
@@ -68,20 +69,9 @@ void proximaAcao(char *comando[], char *destino[]){
 // salvar bloco em .dat
 void criarDAT(Bloco bloco, int i) {
     char nomeBloco[30];
-    sprintf(nomeBloco, "blocos/bloco_%d.dat", i);
-
-    // tenta abrir em read
-    FILE *file = fopen(nomeBloco, "rb");
-    if (file != NULL) {
-        // se o arquivo já existe = mantem
-        fclose(file);
-        // testar
-        // printf("Bloco %d no arquivo: %s.\n", i, nomeBloco);
-        return;
-    }
-
+    sprintf(nomeBloco, "util/blocos/bloco_%d.dat", i);
     // nao existe = cria
-    file = fopen(nomeBloco, "wb");
+    FILE *file = fopen(nomeBloco, "wb");
     if (file != NULL) {
         fwrite(&bloco, sizeof(Bloco), 1, file);
         fclose(file);
@@ -143,11 +133,11 @@ void mostrarMapaDeBits() {
 }
 
 void escreverArquivo(char *arquivo_txt) {
-    printf("Reading text...(Ctrl+D para finalizar):\n");
+    printf("Reading text...(Ctrl+D para finalizar): ");
 
     INode *inode = criarINode(arquivo_txt, "A");
     if (inode == NULL) {
-        printf("Erro ao criar inode para o arquivo.\n");
+        printf("Erro ao criar inode para o arquivo.");
         return;
     }
 

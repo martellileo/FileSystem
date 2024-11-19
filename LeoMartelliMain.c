@@ -10,7 +10,9 @@
 // inicializar o sistema
 void initSys(){
     // functions de init
-    mkdirBlocos("blocos/");
+    createDirectory("util/");
+    createDirectory("util/blocos/");
+    createDirectory("util/mapping/");
     inicializarMapaDeBits();
     inicializarBlocos();
 }
@@ -23,7 +25,9 @@ int main(){
 
     do {
         terminalChar(local);
-        proximaAcao(comando, destino);
+        char *leitura[100];
+
+        proximaAcao(comando, destino, leitura);
         printf("comando: %s, destino: %s", comando, destino);
         printf("\n");
 
@@ -43,8 +47,8 @@ int main(){
         else if(strcmp(comando, "cat") == 0) { // abrir arquivo
             if(destino[0] == '>') { // modo de escrita
                 char *nome_arquivo = destino + 1;
-                while(*nome_arquivo == ' ')
-                    nome_arquivo++;
+                sscanf(leitura, "%s > %s", comando, nome_arquivo);
+                printf("comando: %s, nome_arquivo: %s.", comando, nome_arquivo);
                 comandoCat(nome_arquivo, 1);
             } else {
                 comandoCat(destino, 0); // modo de leitura
