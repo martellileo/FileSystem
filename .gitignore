@@ -52,5 +52,6 @@ Mkfile.old
 dkms.conf
 
 # pastas
-output/
-blocos/
+/output
+/blocos
+/.vscode
