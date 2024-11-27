@@ -6,18 +6,35 @@
 #include <unistd.h>
 #include "Structs.h"
 
-//variaveis de controle global
-unsigned char mapa_de_bits[(TOTAL_BLOCOS + 7) / 8]; // array de bits pra guardar o mapa
-ListaINode *lista_inodes = NULL; // lista global (sera q da bo)?
+/*
+    CORRIGIR:
+    - conflitando o mapa de bits, ele nao cria ou inicializa se nao existir nada;
+    - alterar o cd para funcionar;
+    - used e free nao estao resetando com o sistema sendo reiniciado
 
+    FAZER:
+    - ls
+    - rm
+    - rmdir
+    - mkdir
+    - documentacao
+*/
+
+
+/*
+    Utilizado no initSys para criar diretorios auxiliares, como util/blocos e util/mapping
+    algoritmo pra verificar se existe a pasta blocos -> entender no stackoverflow
+*/
 void createDirectory(const char path[]){
-    // algoritmo pra verificar se existe a pasta blocos -> entender no stackoverflow
     struct stat st = {0};
     if (stat(path, &st) == -1) {
         mkdir(path);
     }
 }
 
+/*
+    Funcoes de call no init system:
+ */
 INode *criarINode(char *nome, char *tipo) {
     INode *novo_inode = (INode *)malloc(sizeof(INode));
     if (novo_inode == NULL) {
@@ -32,19 +49,97 @@ INode *criarINode(char *nome, char *tipo) {
     return novo_inode;
 }
 
-void addINodeLista(INode *inode) {
-    ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
-    novo->inode = inode;
-    novo->next = lista_inodes;
-    lista_inodes = novo;
+void reconstruirListaDeInodes(ListaINode **listaInodes, unsigned char *mapaDeBits) {
+    for (int i = 0; i < totalBlocks; i++) {
+        char nomeBloco[30];
+        sprintf(nomeBloco, "util/blocos/bloco_%d.dat", i);
+
+        FILE *file = fopen(nomeBloco, "rb");
+        if (file != NULL) {
+            Bloco bloco;
+            fread(&bloco, sizeof(Bloco), 1, file);
+            fclose(file);
+
+            // Verificar se o bloco está ocupado
+            if (strlen(bloco.dados) > 0) {
+                mapaDeBits[i / 8] |= (1 << (i % 8));
+
+                // Adicionar inode à lista
+                INode *inode = criarINode(nomeBloco, "A");
+                ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
+                novo->inode = inode;
+                novo->next = *listaInodes;
+                *listaInodes = novo;
+            }
+        }
+    }
 }
 
+void listarInodes(ListaINode *listaInodes) {
+    ListaINode *atual = listaInodes;
+    printf("Lista de Arquivos:\n");
+    while (atual != NULL) {
+        printf("- %s", atual->inode->descricao);
+        atual = atual->next;
+    }
+}
+
+void liberarListaInodes(ListaINode **listaInodes) {
+    ListaINode *atual = *listaInodes;
+    while (atual != NULL) {
+        ListaINode *temp = atual;
+        atual = atual->next;
+        free(temp->inode);
+        free(temp);
+    }
+    *listaInodes = NULL;
+}
+
+void mostrarInodesLivres(const unsigned char *mapaDeBits, size_t tamanho) {
+    printf("inodes livres:\n\t");
+    int encontrouLivres = 0;
+
+    for (size_t i = 0; i < tamanho * 8; i++) {
+        if (((mapaDeBits[i / 8] >> (i % 8)) & 1) == 0) {
+            printf("Bloco |%zu| -> \t", i);
+            encontrouLivres = 1;
+        }
+    }
+    printf("\n");
+
+    if (!encontrouLivres) {
+        printf("todos os inodes estao ocupados!\n");
+    }
+}
+
+void mostrarInodesOcupados(const unsigned char *mapaDeBits, size_t tamanho) {
+    printf("inodes ocupados:\n\t");
+    int encontrouOcupados = 0;
+
+    for (size_t i = 0; i < tamanho * 8; i++) {
+        if ((mapaDeBits[i / 8] >> (i % 8)) & 1) {
+            printf("Bloco |%zu| -> \t", i);
+            encontrouOcupados = 1;
+        }
+    }
+    printf("\n");
+    
+    if (!encontrouOcupados) {
+        printf("todos os inodes estao livres!\n");
+    }
+}
+
+/*
+    as funções terminalChar e proximaAcao são responsáveis por tratar o visual da bash
+    terminalChar -> printa onde estamos no sistema
+    proximaAcao -> separa a leitura em comando e destino, para facilitar a execução dos outros comandos
+*/
 // preciso trocar isso aqui pra funcionar com a fila de inodes
 void terminalChar(char destino[]){
     printf("%s $ ", destino);
 }
 
-void proximaAcao(char *comando[], char *destino[], char leitura[]){
+void proximaAcao(char comando[], char destino[], char leitura[]){
     char aux[50];
     scanf(" %[^\n]", &aux);
     strcpy(leitura, aux);
@@ -70,111 +165,192 @@ void proximaAcao(char *comando[], char *destino[], char leitura[]){
 void criarDAT(Bloco bloco, int i) {
     char nomeBloco[30];
     sprintf(nomeBloco, "util/blocos/bloco_%d.dat", i);
-    // nao existe = cria
+
     FILE *file = fopen(nomeBloco, "wb");
     if (file != NULL) {
         fwrite(&bloco, sizeof(Bloco), 1, file);
         fclose(file);
-        // testar
-        // printf("bloco %d salvo em: %s.\n", i, nomeBloco);
     } else {
-        // printf("Erro ao criar bloco\n");
+        printf("erro ao criar o bloco %d em %s\n", i, nomeBloco);
     }
 }
 
 // init vlocos definidos pelo cluster
 void inicializarBlocos() {
-    // inicia bloco com endereco i e livre
-    for (long int i = 1; i <= TOTAL_BLOCOS; i++) {
+    for (long int i = 0; i < totalBlocks; i++) {
+        char nomeBloco[30];
+        sprintf(nomeBloco, "util/blocos/bloco_%ld.dat", i);
+
+        struct stat st;
+        if (stat(nomeBloco, &st) == 0) {
+            continue; // ? nao sei pq funciona isso aqui
+        }
+
         Bloco bloco = {0};
         criarDAT(bloco, i);
     }
-}
-// init mapa de bits, setando tudo livre
-void inicializarMapaDeBits() {
-    memset(mapa_de_bits, 0, sizeof(mapa_de_bits)); // Todos os bits serão 0 (blocos livres)
+    printf("blocos inicializados!\n");
 }
 
-int alocarBloco() {
-    for (int i = 0; i < TOTAL_BLOCOS; i++) {
-        // verifica se o bit ta livre -> == 0
-        if ((mapa_de_bits[i / 8] & (1 << (i % 8))) == 0) {
-            // aloca bloco como ocupado -> bit = 1
-            mapa_de_bits[i / 8] |= (1 << (i % 8));
-            return i; // retorna o i do bloco alocado
+// // init mapa de bits, setando tudo livre
+void inicializarMapaDeBits(unsigned char **mapaDeBits, size_t tamanho) {
+    // Alocar espaço para o mapa de bits na memória
+    *mapaDeBits = (unsigned char *)calloc(tamanho, sizeof(unsigned char)); // Inicializa com 0
+    if (*mapaDeBits == NULL) {
+        printf("Erro ao alocar memória para o mapa de bits.\n");
+        return;
+    }
+
+    // Verifica se o arquivo do mapa de bits existe
+    FILE *file = fopen("./util/mapaDeBits.txt", "r");
+    if (file == NULL) {
+        printf("Arquivo mapaDeBits.txt não encontrado. Criando um novo...\n");
+
+        // Cria e inicializa o mapa de bits com todos os bits livres (0)
+        salvarMapaDeBits(*mapaDeBits, tamanho); // Salva o novo mapa de bits no arquivo
+    } else {
+        printf("Carregando mapa de bits existente...\n");
+
+        // Lê o conteúdo do arquivo para o mapa de bits na memória
+        char linha[256];
+        size_t bitIndex = 0;
+
+        while (fgets(linha, sizeof(linha), file) != NULL && bitIndex < tamanho * 8) {
+            for (int i = 0; linha[i] != '\0' && linha[i] != '\n'; i++) {
+                if (linha[i] == '0' || linha[i] == '1') {
+                    if (linha[i] == '1') {
+                        // Define o bit correspondente no mapa
+                        (*mapaDeBits)[bitIndex / 8] |= (1 << (bitIndex % 8));
+                    }
+                    bitIndex++;
+                }
+            }
+        }
+
+        fclose(file);
+
+        // Verifica se o arquivo estava incompleto
+        if (bitIndex < tamanho * 8) {
+            printf("Aviso: Arquivo mapaDeBits.txt possui menos bits que o esperado (%zu/%zu). Completando com zeros...\n", bitIndex, tamanho * 8);
         }
     }
-    return -1; // tudo ocupado
 }
 
-void liberarBloco(int indice) {
-    if (indice >= 0 && indice < TOTAL_BLOCOS) {
-        // aloca bloco como livre -> bit = 0
-        mapa_de_bits[indice / 8] &= ~(1 << (indice % 8));
+
+void salvarMapaDeBits(const unsigned char *mapaDeBits, size_t tamanho) {
+    FILE *file = fopen("./util/mapaDeBits.txt", "w");
+    if (file == NULL) {
+        printf("Erro ao abrir o arquivo mapaDeBits.txt para escrita.\n");
+        return;
     }
-}
 
-int statusBloco(int indice) {
-    if (indice >= 0 && indice < TOTAL_BLOCOS) {
-        return (mapa_de_bits[indice / 8] & (1 << (indice % 8))) != 0;
-    }
-    return -1; // valor nao encontrado no mapa
-}
-
-void mostrarMapaDeBits() {
-    printf("Mapa de Bits:\n");
-    for (int i = 0; i < TOTAL_BLOCOS; i++) {
-        printf("%d", (mapa_de_bits[i / 8] & (1 << (i % 8))) != 0);
+    for (size_t i = 0; i < tamanho * 8; i++) {
+        // Escreve cada bit no arquivo
+        fprintf(file, "%d", (mapaDeBits[i / 8] >> (i % 8)) & 1);
         if ((i + 1) % 8 == 0) {
-            printf(" ");
+            fprintf(file, " "); // Insere espaço entre bytes para legibilidade
         }
+    }
+    fprintf(file, "\n");
+
+    fclose(file);
+    printf("Mapa de bits salvo com sucesso em mapaDeBits.txt.\n");
+}
+
+void mostrarMapaDeBits(const unsigned char *mapaDeBits, size_t tamanho) {
+    printf("Mapa de Bits:\n");
+    for (size_t i = 0; i < tamanho * 8; i++) {
+        // Imprime cada bit
+        printf("%d", (mapaDeBits[i / 8] >> (i % 8)) & 1);
+        if ((i + 1) % 8 == 0) printf(" ");
     }
     printf("\n");
 }
 
-void escreverArquivo(char *arquivo_txt) {
-    printf("Reading text...(Ctrl+D para finalizar): ");
+int alocarBloco(unsigned char *mapaDeBits) {
+    for (int i = 0; i < totalBlocks; i++) {
+        // Verifica se o bloco está livre (bit = 0)
+        if ((mapaDeBits[i / 8] & (1 << (i % 8))) == 0) {
+            // Marca como ocupado (bit = 1)
+            mapaDeBits[i / 8] |= (1 << (i % 8));
+            return i; // Retorna o índice do bloco alocado
+        }
+    }
+    return -1; // Sem espaço disponível
+}
 
+void liberarBloco(int indice, unsigned char *mapaDeBits) {
+    if (indice >= 0 && indice < totalBlocks) {
+        // Marca o bloco como livre (bit = 0)
+        mapaDeBits[indice / 8] &= ~(1 << (indice % 8));
+    }
+}
+
+int statusBloco(int indice, unsigned char *mapaDeBits) {
+    if (indice >= 0 && indice < totalBlocks) {
+        // Retorna o status do bloco (0 = livre, 1 = ocupado)
+        return (mapaDeBits[indice / 8] & (1 << (indice % 8))) != 0;
+    }
+    return -1; // Índice inválido
+}
+
+void escreverArquivo(char *arquivo_txt, ListaINode **listaInodes, unsigned char *mapaDeBits) {
+    printf("Digite o texto para o arquivo (Ctrl+D para finalizar):\n");
+
+    // Criação do inode
     INode *inode = criarINode(arquivo_txt, "A");
     if (inode == NULL) {
-        printf("Erro ao criar inode para o arquivo.");
+        printf("Erro ao criar inode para o arquivo.\n");
         return;
     }
 
-    char buffer[CLUSTER_B];
+    char buffer[tfCluster];
     int bloco_index = 0;
 
-    // getText e salvar em blocos
-    while (fgets(buffer, CLUSTER_B, stdin)) {
-        int bloco_id = alocarBloco();
+    // Ler entrada do usuário e salvar em blocos
+    while (fgets(buffer, tfCluster, stdin)) {
+        int bloco_id = alocarBloco(mapaDeBits);
         if (bloco_id == -1) {
-            printf("sem espaço disponivel em bloco.\n");
-            liberarBloco(bloco_id); // rowback
+            printf("Sem espaço disponível.\n");
+            liberarBloco(bloco_id, mapaDeBits); // Desfaz a alocação em caso de erro
             return;
         }
 
+        // Escrever os dados no bloco
         Bloco bloco;
-        memset(bloco.dados, 0, CLUSTER_B);
-        strncpy(bloco.dados, buffer, CLUSTER_B);
+        memset(bloco.dados, 0, tfCluster);
+        strncpy(bloco.dados, buffer, tfCluster);
+        criarDAT(bloco, bloco_id);
 
-        criarDAT(bloco, bloco_id); // salvar em um .dat
-        inode->blocos[bloco_index++] = bloco; // link bloco e inode
+        // Associar o bloco ao inode
+        inode->blocos[bloco_index++] = bloco;
+
+        // Verifica se o inode está cheio
+        if (bloco_index >= totalBlocks) {
+            printf("Limite de blocos do arquivo atingido.\n");
+            break;
+        }
     }
 
-    addINodeLista(inode); // adicionar a lista global
+    // Adicionar inode à lista
+    ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
+    novo->inode = inode;
+    novo->next = *listaInodes;
+    *listaInodes = novo;
+
     printf("Arquivo %s salvo com sucesso.\n", arquivo_txt);
 }
 
-void lerArquivo(char *arquivo_txt) {
-    ListaINode *atual = lista_inodes;
+void lerArquivo(char *arquivo_txt, ListaINode *listaInodes) {
+    ListaINode *atual = listaInodes;
 
-    // busca o inode
+    // Procurar o inode correspondente
     while (atual != NULL) {
         if (strcmp(atual->inode->descricao, arquivo_txt) == 0) {
             INode *inode = atual->inode;
 
             printf("Conteúdo do arquivo %s:\n", arquivo_txt);
-            for (int i = 0; i < TOTAL_BLOCOS && inode->blocos[i].dados[0] != '\0'; i++) {
+            for (int i = 0; i < totalBlocks && inode->blocos[i].dados[0] != '\0'; i++) {
                 printf("%s", inode->blocos[i].dados);
             }
             return;
@@ -185,10 +361,10 @@ void lerArquivo(char *arquivo_txt) {
     printf("Arquivo %s não encontrado.\n", arquivo_txt);
 }
 
-void comandoCat(char *arquivo_txt, int escrever) {
+void comandoCat(char *arquivo_txt, int escrever, ListaINode **listaInodes, unsigned char *mapaDeBits) {
     if (escrever) {
-        escreverArquivo(arquivo_txt);
+        escreverArquivo(arquivo_txt, listaInodes, mapaDeBits);
     } else {
-        lerArquivo(arquivo_txt);
+        lerArquivo(arquivo_txt, *listaInodes);
     }
 }
