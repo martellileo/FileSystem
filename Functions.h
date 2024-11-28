@@ -8,11 +8,14 @@
 
 /*
     CORRIGIR:
-    - conflitando o mapa de bits, ele nao cria ou inicializa se nao existir nada;
+    - conflitando o mapa de bits, ele nao cria ou inicializa se nao existir nada FEITO
+
     - alterar o cd para funcionar;
-    - used e free nao estao resetando com o sistema sendo reiniciado
+
+    - used e free nao estao resetando com o sistema sendo reiniciado FEITO
 
     FAZER:
+    - DIRETORIO
     - ls
     - rm
     - rmdir
@@ -32,8 +35,6 @@ void createDirectory(const char path[]){
     }
 }
 
-
-
 /*
     Funcoes de call no init system:
  */
@@ -51,33 +52,51 @@ INode *criarINode(char *nome, char *tipo) {
     return novo_inode;
 }
 
-
 /*
     InitSys e algumas dependencias
 */
 void reconstruirListaDeInodes(ListaINode **listaInodes, unsigned char *mapaDeBits) {
-    for (int i = 0; i < totalBlocks; i++) {
-        char nomeBloco[30];
-        sprintf(nomeBloco, "util/blocos/bloco_%d.dat", i);
+    // carregao arquivo
+    FILE *file = fopen("./util/mapping/inodes.dat", "rb");
+    if (file != NULL) {
+        printf("Carregando lista de inodes de util/inodes.dat...\n");
 
-        FILE *file = fopen(nomeBloco, "rb");
-        if (file != NULL) {
-            Bloco bloco;
-            fread(&bloco, sizeof(Bloco), 1, file);
-            fclose(file);
+        INode inodeTemp;
+        while (fread(&inodeTemp, sizeof(INode), 1, file) == 1) {
+            // cria um temp pra copiar do arquivo e depois salvar na lista
+            INode *inode = (INode *)malloc(sizeof(INode));
+            if (inode == NULL) {
+                printf("Erro ao alocar memoria para inode.\n");
+                fclose(file);
+                return;
+            }
+            memcpy(inode, &inodeTemp, sizeof(INode));
 
-            // Verificar se o bloco está ocupado
-            if (strlen(bloco.dados) > 0) {
-                mapaDeBits[i / 8] |= (1 << (i % 8));
+            // salva o inode na lista
+            ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
+            if (novo == NULL) {
+                printf("erro ao alocar memoria para no da lista de inodes.\n");
+                free(inode);
+                fclose(file);
+                return;
+            }
 
-                // Adicionar inode à lista
-                INode *inode = criarINode(nomeBloco, "A");
-                ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
-                novo->inode = inode;
-                novo->next = *listaInodes;
-                *listaInodes = novo;
+            novo->inode = inode;
+            novo->next = *listaInodes;
+            *listaInodes = novo;
+
+            // atualiza o mapa de bits
+            for (int i = 0; i < totalBlocks; i++) {
+                if (inode->blocos[i].dados[0] != '\0') { // Bloco usado
+                    mapaDeBits[i / 8] |= (1 << (i % 8));
+                }
             }
         }
+
+        fclose(file);
+        printf("Lista de inodes carregada com sucesso.\n");
+    } else {
+        printf("Nenhum arquivo de inodes encontrado. Inicializando lista vazia.\n");
     }
 }
 
@@ -121,14 +140,14 @@ void inicializarMapaDeBits(unsigned char **mapaDeBits, size_t tamanho) {
     }
 
     // verifica se o mapa de bits existe
-    FILE *file = fopen("./util/mapaDeBits.txt", "r");
+    FILE *file = fopen("./util/mapping/mapaDeBits.txt", "r");
     if (file == NULL) {
-        printf("mapa de bits nao existe. Criando um novo...\n");
+        printf("Mapa de bits nao existe. Criando um novo.\n");
 
         // se ele nao existir, cria um novo e seta tudo em 0
         salvarMapaDeBits(*mapaDeBits, tamanho);
     } else {
-        printf("carregando mapa de bits...\n");
+        printf("Mapa de bits carregado.\n");
 
         // copia do txt para memória
         char linha[256];
@@ -152,6 +171,135 @@ void inicializarMapaDeBits(unsigned char **mapaDeBits, size_t tamanho) {
             printf("warning: mapaDeBits possui menos bits que o esperado, verifique seus dados.\n", bitIndex, tamanho * 8);
         }
     }
+}
+/*
+    Lista de diretorios
+*/
+void salvarListaDeDiretorios(ListaDiretorio *listaDiretorios) {
+    FILE *file = fopen("./util/mapping/listdirectorys.dat", "wb");
+    if (file == NULL) {
+        printf("Erro ao abrir arquivo para salvar lista de diretórios.\n");
+        return;
+    }
+
+    ListaDiretorio *atual = listaDiretorios;
+    while (atual != NULL) {
+        // Grava o campo `nome` no arquivo
+        fwrite(atual->nome, sizeof(char), sizeof(atual->nome), file);
+        atual = atual->next;
+    }
+
+    fclose(file);
+    printf("Lista de diretórios salva com sucesso.\n");
+}
+
+// Função para reconstruir a lista de diretórios a partir do arquivo
+void reconstruirListaDeDiretorios(ListaDiretorio **listaDiretorios) {
+    FILE *file = fopen("./util/mapping/listdirectorys.dat", "rb");
+    if (file == NULL) {
+        printf("Lista de diretórios não existe. Inicializando uma nova lista.\n");
+        return;
+    }
+
+    while (1) {
+        char nome[50];
+        // Lê um nome de diretório do arquivo
+        if (fread(nome, sizeof(char), sizeof(nome), file) != sizeof(nome)) {
+            // Sai do loop ao atingir o final do arquivo ou em caso de erro
+            break;
+        }
+
+        // Cria um novo nó para a lista
+        ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio));
+        if (novoDiretorio == NULL) {
+            printf("Erro ao alocar memória para o diretório.\n");
+            fclose(file);
+            return;
+        }
+
+        // Copia o nome lido para o novo nó
+        strcpy(novoDiretorio->nome, nome);
+        novoDiretorio->next = *listaDiretorios;
+
+        // Caso seja lista duplamente encadeada
+        // novoDiretorio->prev = NULL;
+        // if (*listaDiretorios != NULL) {
+        //     (*listaDiretorios)->prev = novoDiretorio;
+        // }
+
+        *listaDiretorios = novoDiretorio;
+    }
+
+    fclose(file);
+    printf("Lista de diretórios carregada com sucesso.\n");
+}
+
+
+/*
+    Se for a primeira vez rodando o programa, ele cria o root para a navegacao entre diretórios
+*/
+void construirHome(ListaDiretorio **listaDiretorios, ListaINode **listaInodes, unsigned char *mapaDeBits) {
+    if (*listaDiretorios == NULL) {
+        printf("Criando root 'home'...\n");
+
+        INode *inodeHome = criarINode("home", "D");
+        if (inodeHome == NULL) {
+            printf("Erro ao criar inode para o root.\n");
+            return;
+        }
+
+        // Atualizar mapa de bits para o inode "home"
+        int blocoHome = alocarBloco(mapaDeBits);
+        if (blocoHome == -1) {
+            printf("warning: sem espaco no mapa de bits para o inode 'home'.\n");
+            free(inodeHome);
+            return;
+        }
+        inodeHome->blocos[0] = (Bloco){0}; // Inicializar o primeiro bloco do diretório
+
+        // Adicionar inode à lista de inodes
+        ListaINode *novoINode = (ListaINode *)malloc(sizeof(ListaINode));
+        if (novoINode == NULL) {
+            printf("Erro ao alocar memória para a lista de inodes.\n");
+            free(inodeHome);
+            return;
+        }
+        novoINode->inode = inodeHome;
+        novoINode->next = *listaInodes;
+        *listaInodes = novoINode;
+
+        // Adicionar diretório à lista de diretórios
+        ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio));
+        if (novoDiretorio == NULL) {
+            printf("Erro ao alocar memória para a lista de diretórios.\n");
+            free(inodeHome);
+            return;
+        }
+        strcpy(novoDiretorio->nome, "home");
+        novoDiretorio->inode = inodeHome;
+        novoDiretorio->next = *listaDiretorios;
+        novoDiretorio->prev = NULL;
+        *listaDiretorios = novoDiretorio;
+
+        printf("Diretorio raiz 'home' criado com sucesso.\n");
+    } else {
+        printf("Diretorio raiz 'home' já existe.\n");
+    }
+}
+
+void listarDiretorios(ListaDiretorio *listaDiretorios) {
+    if (listaDiretorios == NULL) {
+        printf("nenhum diretorio encontrado.\n");
+        return;
+    } else {
+        printf("lista de diretorios:\n");
+        ListaDiretorio *atual = listaDiretorios;
+        while (atual != NULL) {
+            printf("- %s\t", atual->nome);
+            atual = atual->next;
+        }
+    }
+    printf("\n");
 }
 
 /*
@@ -183,7 +331,7 @@ void mostrarInodesLivres(const unsigned char *mapaDeBits, size_t tamanho) {
 
     for (size_t i = 0; i < tamanho * 8; i++) {
         if (((mapaDeBits[i / 8] >> (i % 8)) & 1) == 0) {
-            printf("Bloco |%zu| -> \t", i);
+            printf("Bloco |%zu| ->\t", i);
             encontrouLivres = 1;
         }
     }
@@ -209,6 +357,23 @@ void mostrarInodesOcupados(const unsigned char *mapaDeBits, size_t tamanho) {
     if (!encontrouOcupados) {
         printf("todos os inodes estao livres!\n");
     }
+}
+
+void salvarListaDeInodes(ListaINode *listaInodes) {
+    FILE *file = fopen("./util/mapping/inodes.dat", "wb");
+    if (file == NULL) {
+        printf("Erro ao abrir arquivo para salvar inodes.\n");
+        return;
+    }
+
+    ListaINode *atual = listaInodes;
+    while (atual != NULL) {
+        fwrite(atual->inode, sizeof(INode), 1, file); // salva cada inode no arquivo
+        atual = atual->next;
+    }
+
+    fclose(file);
+    printf("Lista de inodes salva com sucesso.\n");
 }
 
 /*
@@ -244,7 +409,7 @@ void proximaAcao(char comando[], char destino[], char leitura[]){
 }
 
 void salvarMapaDeBits(const unsigned char *mapaDeBits, size_t tamanho) {
-    FILE *file = fopen("./util/mapaDeBits.txt", "w");
+    FILE *file = fopen("./util/mapping/mapaDeBits.txt", "w");
     if (file == NULL) {
         printf("Erro ao abrir o arquivo mapaDeBits.txt para escrita.\n");
         return;
@@ -278,20 +443,17 @@ void mostrarMapaDeBits(const unsigned char *mapaDeBits, size_t tamanho) {
 */
 int alocarBloco(unsigned char *mapaDeBits) {
     for (int i = 0; i < totalBlocks; i++) {
-        // Verifica se o bloco está livre (bit = 0)
-        if ((mapaDeBits[i / 8] & (1 << (i % 8))) == 0) {
-            // Marca como ocupado (bit = 1)
-            mapaDeBits[i / 8] |= (1 << (i % 8));
-            return i; // Retorna o índice do bloco alocado
+        if (((mapaDeBits[i / 8] >> (i % 8)) & 1) == 0) { // verifica se ta livre
+            mapaDeBits[i / 8] |= (1 << (i % 8)); // seta ocupado
+            return i;
         }
     }
-    return -1; // Sem espaço disponível
+    return -1; //sem espaco
 }
 
 void liberarBloco(int indice, unsigned char *mapaDeBits) {
     if (indice >= 0 && indice < totalBlocks) {
-        // Marca o bloco como livre (bit = 0)
-        mapaDeBits[indice / 8] &= ~(1 << (indice % 8));
+        mapaDeBits[indice / 8] &= ~(1 << (indice % 8)); // seta livre
     }
 }
 
@@ -300,7 +462,7 @@ int statusBloco(int indice, unsigned char *mapaDeBits) {
         // Retorna o status do bloco (0 = livre, 1 = ocupado)
         return (mapaDeBits[indice / 8] & (1 << (indice % 8))) != 0;
     }
-    return -1; // Índice inválido
+    return -1; // invalido
 }
 
 
@@ -377,6 +539,32 @@ void comandoCat(char *arquivo_txt, int escrever, ListaINode **listaInodes, unsig
     if (escrever) {
         escreverArquivo(arquivo_txt, listaInodes, mapaDeBits);
     } else {
-        lerArquivo(arquivo_txt, *listaInodes);
+        ListaINode *atual = *listaInodes;
+        while (atual != NULL) {
+            if (strcmp(atual->inode->descricao, arquivo_txt) == 0) {
+                lerArquivo(arquivo_txt, *listaInodes);
+                return;
+            }
+            atual = atual->next;
+        }
+        printf("Arquivo %s não encontrado.\n", arquivo_txt);
     }
+}
+
+/*
+    Comando mkdir
+*/
+void comandoMkdir(char *nome_diretorio, ListaINode **listaInodes, unsigned char *mapaDeBits, ListaDiretorio **listaDiretorio) {
+    INode *inode = criarINode(nome_diretorio, "D");
+    if (inode == NULL) {
+        printf("Erro ao criar inode para o diretório.\n");
+        return;
+    }
+
+    ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
+    novo->inode = inode;
+    novo->next = *listaInodes;
+    *listaInodes = novo;
+
+    printf("Diretório %s criado com sucesso.\n", nome_diretorio);
 }

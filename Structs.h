@@ -11,13 +11,7 @@
 #define tfMapaBits ((totalBlocks +7)/8)
 
 /*
-     ____  _                     
-    |  _ \| |                    
-    | |_) | | ___   ___ ___  ___ 
-    |  _ <| |/ _ \ / __/ _ \/ __|
-    | |_) | | (_) | (_| (_) \__ \
-    |____/|_|\___/ \___\___/|___/
-                                                
+    Blocos             
 */
 typedef struct sBloco {
     char dados[tfCluster];
@@ -34,13 +28,7 @@ typedef struct lBlocos {
 
 
 /*
-      _____                 _           
-     |_   _|               | |          
-       | |  _ __   ___   __| | ___  ___ 
-       | | | '_ \ / _ \ / _` |/ _ \/ __|
-      _| |_| | | | (_) | (_| |  __/\__ \
-     |_____|_| |_|\___/ \__,_|\___||___/
-                                                                  
+    Inodes                                                            
 */
 
 typedef struct sInode {
@@ -61,16 +49,13 @@ typedef struct lINode {
 
 
 /*
-  _____  _          _    __       _           
- |  __ \(_)        | |  /_/      (_)          
- | |  | |_ _ __ ___| |_ ___  _ __ _  ___  ___ 
- | |  | | | '__/ _ \ __/ _ \| '__| |/ _ \/ __|
- | |__| | | | |  __/ || (_) | |  | | (_) \__ \
- |_____/|_|_|  \___|\__\___/|_|  |_|\___/|___/                                     
-                                              
+    Diretórios                                             
 */
-typedef struct sDiretorio {
-
-} Diretorio;
+typedef struct lDiretorio {
+    INode *inode;
+    char nome[100];
+    struct lDiretorio *next;
+    struct lDiretorio *prev;
+} ListaDiretorio;
 
 #endif
