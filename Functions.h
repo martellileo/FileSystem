@@ -10,17 +10,17 @@
     CORRIGIR:
     - conflitando o mapa de bits, ele nao cria ou inicializa se nao existir nada FEITO
 
-    - alterar o cd para funcionar;
+    - alterar o cd para funcionar; 
 
     - used e free nao estao resetando com o sistema sendo reiniciado FEITO
 
     FAZER:
     - DIRETORIO
-    - ls
+    - ls feito
     - rm
-    - rmdir
-    - mkdir
-    - documentacao
+    - rmdir feito
+    - mkdir feito
+    - documentacao feito
 */
 
 
@@ -140,7 +140,6 @@ void inicializarBlocos() {
 }
 
 void inicializarMapaDeBits(unsigned char **mapaDeBits, size_t tamanho) {
-    // Alocar espaço para o mapa de bits na memória
     *mapaDeBits = (unsigned char *)calloc(tamanho, sizeof(unsigned char));
     if (*mapaDeBits == NULL) {
         printf("Erro ao alocar memoria para o mapa de bits.\n");
@@ -192,7 +191,7 @@ void salvarListaDeDiretorios(ListaDiretorio *listaDiretorios) {
 
     ListaDiretorio *atual = listaDiretorios;
     while (atual != NULL) {
-        // Grava o campo `nome` no arquivo
+        // grava o nome no arquivo
         fwrite(atual->nome, sizeof(char), sizeof(atual->nome), file);
         atual = atual->next;
     }
@@ -209,9 +208,8 @@ void reconstruirListaDeDiretorios(ListaDiretorio **listaDiretorios) {
         return; 
     } 
 
-    char nome[100]; // Buffer para armazenar o nome do diretório
+    char nome[100];
     while (fread(nome, sizeof(char), sizeof(nome), file) == sizeof(nome)) { 
-        // Cria um novo nó para a lista 
         ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio)); 
         if (novoDiretorio == NULL) { 
             printf("Erro ao alocar memoria para o diretório.\n"); 
@@ -219,23 +217,21 @@ void reconstruirListaDeDiretorios(ListaDiretorio **listaDiretorios) {
             return; 
         } 
 
-        // Copia o nome lido para o novo nó 
         strcpy(novoDiretorio->nome, nome); 
         novoDiretorio->next = NULL;
 
         if (*listaDiretorios == NULL) { 
-            // Lista está vazia, insere como o primeiro nó
             *listaDiretorios = novoDiretorio; 
-            novoDiretorio->prev = NULL; // Ajuste para lista duplamente encadeada, se necessário
+            novoDiretorio->prev = NULL;
         } else { 
-            // Procura o último nó da lista
+            // vai ate o final
             ListaDiretorio *temp = *listaDiretorios; 
             while (temp->next != NULL) { 
                 temp = temp->next; 
             } 
-            // Insere no final da lista
+            // insere final da lista
             temp->next = novoDiretorio; 
-            novoDiretorio->prev = temp; // Ajuste para lista duplamente encadeada, se necessário
+            novoDiretorio->prev = temp;
         }
     } 
     fclose(file); 
@@ -423,10 +419,10 @@ void salvarMapaDeBits(const unsigned char *mapaDeBits, size_t tamanho) {
     }
 
     for (size_t i = 0; i < tamanho * 8; i++) {
-        // Escreve cada bit no arquivo
+        // escreve bit por bit no arquivo
         fprintf(file, "%d", (mapaDeBits[i / 8] >> (i % 8)) & 1);
         if ((i + 1) % 8 == 0) {
-            fprintf(file, " "); // Insere espaço entre bytes para legibilidade
+            fprintf(file, " ");
         }
     }
     fprintf(file, "\n");
@@ -438,7 +434,7 @@ void salvarMapaDeBits(const unsigned char *mapaDeBits, size_t tamanho) {
 void mostrarMapaDeBits(const unsigned char *mapaDeBits, size_t tamanho) {
     printf("Mapa de Bits:\n");
     for (size_t i = 0; i < tamanho * 8; i++) {
-        // Imprime cada bit
+        // imprime cada bit
         printf("%d", (mapaDeBits[i / 8] >> (i % 8)) & 1);
         if ((i + 1) % 8 == 0) printf(" ");
     }
@@ -466,7 +462,7 @@ void liberarBloco(int indice, unsigned char *mapaDeBits) {
 
 int statusBloco(int indice, unsigned char *mapaDeBits) {
     if (indice >= 0 && indice < totalBlocks) {
-        // Retorna o status do bloco (0 = livre, 1 = ocupado)
+        //status do bloco (0 = livre, 1 = ocupado)
         return (mapaDeBits[indice / 8] & (1 << (indice % 8))) != 0;
     }
     return -1; // invalido
@@ -490,7 +486,7 @@ void escreverArquivo(char *arquivo_txt, ListaINode **listaInodes, unsigned char 
     char buffer[tfCluster];
     int bloco_index = 0;
 
-    // lê o texto do usuário e divide em blocos
+    // le o texto do usuário e divide em blocos
     while (fgets(buffer, tfCluster, stdin)) {
         int bloco_id = alocarBloco(mapaDeBits);
         if (bloco_id == -1) {
@@ -526,10 +522,9 @@ void escreverArquivo(char *arquivo_txt, ListaINode **listaInodes, unsigned char 
     novo->next = NULL;
 
     if (*listaInodes == NULL) {
-        // Caso a lista esteja vazia, o novo inode será o primeiro
         *listaInodes = novo;
     } else {
-        // Percorre até o final da lista e adiciona o novo inode
+        // vai ate o final e adiciona novo inode
         ListaINode *atual = *listaInodes;
         while (atual->next != NULL) {
             atual = atual->next;
@@ -580,7 +575,6 @@ void comandoCat(char *arquivo_txt, int escrever, ListaINode **listaInodes, unsig
     Comando mkdir
 */
 void comandoMkdir(char *nomeDiretorio, ListaDiretorio **listaDiretorios, ListaINode **listaInodes, unsigned char *mapaDeBits) {
-    // Verifica se o diretório já existe
     if(strcmp(nomeDiretorio, "\0") == 1){
         printf("Diretorio sem nome não pode ser criado.\n");
         return;
@@ -595,14 +589,14 @@ void comandoMkdir(char *nomeDiretorio, ListaDiretorio **listaDiretorios, ListaIN
         atual = atual->next;
     }
 
-    // Cria um novo inode para o diretório
+    // novo inode pro dir
     INode *novoInode = criarINode(nomeDiretorio, "D");
     if (novoInode == NULL) {
         printf("Erro ao criar inode para o diretório.\n");
         return;
     }
 
-    // Adiciona o novo inode no final da lista de inodes
+    // adiciona fim da fila de inodes
     ListaINode *novoINodeItem = (ListaINode *)malloc(sizeof(ListaINode));
     novoINodeItem->inode = novoInode;
     novoINodeItem->next = NULL;
@@ -617,14 +611,14 @@ void comandoMkdir(char *nomeDiretorio, ListaDiretorio **listaDiretorios, ListaIN
         inodeAtual->next = novoINodeItem;
     }
 
-    // Cria o novo item para a lista de diretórios
+    // cria noto diretorio na lista
     ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio));
     strcpy(novoDiretorio->nome, nomeDiretorio);
     novoDiretorio->inode = novoInode;
     novoDiretorio->next = NULL;
     novoDiretorio->prev = NULL;
 
-    // Adiciona o novo diretório no final da lista de diretórios
+    // adiciona fim da fila
     if (*listaDiretorios == NULL) {
         *listaDiretorios = novoDiretorio;
     } else {
@@ -659,5 +653,125 @@ void comandoLs(ListaDiretorio *listaDiretorios, ListaINode *listaInodes) {
 }
 
 /*
-    comando cd
+    comando rmdir
 */
+void comandoRmdir(char *nomeDiretorio, ListaDiretorio **listaDiretorios, ListaINode **listaInodes, unsigned char *mapaDeBits) {
+    // Verifica se o diretório existe
+    ListaDiretorio *atual = *listaDiretorios;
+    ListaDiretorio *anterior = NULL;
+
+    while (atual != NULL) {
+        if (strcmp(atual->nome, nomeDiretorio) == 0) {
+            INode *inodeDiretorio = atual->inode;
+
+            int estaVazio = 1;
+            for (int i = 0; i < totalBlocks && inodeDiretorio->blocos[i].dados[0] != '\0'; i++) {
+                if (strlen(inodeDiretorio->blocos[i].dados) > 0) {
+                    estaVazio = 0;
+                    break;
+                }
+            }
+
+            if (!estaVazio) {
+                printf("Erro: O diretório '%s' não está vazio.\n", nomeDiretorio);
+                return;
+            }
+
+            if (anterior == NULL) {
+                *listaDiretorios = atual->next;
+            } else {
+                anterior->next = atual->next;
+                if (atual->next != NULL) {
+                    atual->next->prev = anterior;
+                }
+            }
+
+            for (int i = 0; i < totalBlocks; i++) {
+                if (statusBloco(i, mapaDeBits) == 1) {
+                    liberarBloco(i, mapaDeBits);
+                }
+            }
+
+            ListaINode *inodeAtual = *listaInodes, *inodeAnterior = NULL;
+            while (inodeAtual != NULL) {
+                if (inodeAtual->inode->id == inodeDiretorio->id) {
+                    if (inodeAnterior == NULL) {
+                        *listaInodes = inodeAtual->next;
+                    } else {
+                        inodeAnterior->next = inodeAtual->next;
+                    }
+                    free(inodeAtual->inode);
+                    free(inodeAtual);
+                    break;
+                }
+                inodeAnterior = inodeAtual;
+                inodeAtual = inodeAtual->next;
+            }
+
+            free(atual);
+            printf("Diretorio '%s' removido com sucesso.\n", nomeDiretorio);
+            return;
+        }
+
+        anterior = atual;
+        atual = atual->next;
+    }
+
+    printf("Erro: Diretorio '%s' nao encontrado.\n", nomeDiretorio);
+}
+
+/*
+    comando rm
+*/
+void comandoRm(char *nomeArquivo, ListaINode **listaInodes, unsigned char *mapaDeBits) {
+    ListaINode *atual = *listaInodes;
+    ListaINode *anterior = NULL;
+
+    while (atual != NULL) {
+        if (strcmp(atual->inode->descricao, nomeArquivo) == 0) {
+            for (int i = 0; i < totalBlocks; i++) {
+                if (atual->inode->blocos[i].dados[0] != '\0') {
+                    liberarBloco(i, mapaDeBits);
+                }
+            }
+
+            // remove da lista
+            if (anterior == NULL) {
+                *listaInodes = atual->next;
+            } else {
+                anterior->next = atual->next;
+            }
+
+            free(atual->inode);
+            free(atual); // libera memoria
+            printf("Arquivo '%s' removido com sucesso.\n", nomeArquivo);
+            return;
+        }
+
+        anterior = atual;
+        atual = atual->next;
+    }
+
+    printf("Erro: Arquivo '%s' não encontrado.\n", nomeArquivo);
+}
+
+/*
+    comando help
+*/
+void help(){
+    printf("Comandos:\n");
+    printf("  mkdir <nome> -> implementado\n");
+    printf("  ls -> implementado\n");
+    printf("  cat (leitura e escrita) -> implementado\n");
+    printf("  exit -> sai do programa -> implementado\n");
+    printf("  clear -> limpa a tela -> implementado\n");
+    printf("  show -> mostra o mapa de bits -> implementado\n");
+    printf("  freeinodes -> mostra os inodes livres -> implementado\n");
+    printf("  usedinodes -> mostra os inodes ocupados -> implementado\n");
+    printf("  directorylist -> mostra todos os diretoris do sistema -> implementado\n");
+    printf("  rmdir -> exclui o diretorio -> implementado\n");
+    printf("  cd -> nao implementado\n");
+    printf("  rm -> nao implementado\n");
+    printf("  mv -> nao implementado\n");
+    printf("  run script.sh -> nao implementado\n");
+}

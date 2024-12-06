@@ -61,6 +61,8 @@ int main(){
 
         if(strcmp(comando, "cd") == 0){ // cd
             printf("\nnao implementado");
+        } else if(strcmp(comando, "help") == 0) {
+            help();
         } else if (strcmp(comando, "exit") == 0) {
             saida = 1;
 
@@ -103,9 +105,13 @@ int main(){
         } else if(strcmp(comando, "mv") == 0) { // mover arquivo
 
         } else if(strcmp(comando, "rm") == 0) { // remover arquivo
-
+            if (strlen(destino) > 0) {
+                comandoRm(destino, &listaInodes, mapaDeBits);
+            } else {
+                printf("Erro: Nome do arquivo não especificado.\n");
+            }
         } else if(strcmp(comando, "rmdir") == 0) { // remover diretorio
-
+            comandoRmdir(destino, &listaDiretorios, &listaInodes, mapaDeBits);
         } else if(strcmp(comando, "ls") == 0) { // listar arquivos
             comandoLs(listaDiretorios, listaInodes);
         } else {
