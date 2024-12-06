@@ -135,7 +135,7 @@ void inicializarMapaDeBits(unsigned char **mapaDeBits, size_t tamanho) {
     // Alocar espaço para o mapa de bits na memória
     *mapaDeBits = (unsigned char *)calloc(tamanho, sizeof(unsigned char));
     if (*mapaDeBits == NULL) {
-        printf("Erro ao alocar memória para o mapa de bits.\n");
+        printf("Erro ao alocar memoria para o mapa de bits.\n");
         return;
     }
 
@@ -178,7 +178,7 @@ void inicializarMapaDeBits(unsigned char **mapaDeBits, size_t tamanho) {
 void salvarListaDeDiretorios(ListaDiretorio *listaDiretorios) {
     FILE *file = fopen("./util/mapping/listdirectorys.dat", "wb");
     if (file == NULL) {
-        printf("Erro ao abrir arquivo para salvar lista de diretórios.\n");
+        printf("Erro ao abrir arquivo para salvar lista de diretorios.\n");
         return;
     }
 
@@ -190,50 +190,49 @@ void salvarListaDeDiretorios(ListaDiretorio *listaDiretorios) {
     }
 
     fclose(file);
-    printf("Lista de diretórios salva com sucesso.\n");
+    printf("Lista de diretorios salva com sucesso.\n");
 }
 
-// Função para reconstruir a lista de diretórios a partir do arquivo
-void reconstruirListaDeDiretorios(ListaDiretorio **listaDiretorios) {
-    FILE *file = fopen("./util/mapping/listdirectorys.dat", "rb");
-    if (file == NULL) {
-        printf("Lista de diretórios não existe. Inicializando uma nova lista.\n");
-        return;
-    }
+// reconstruir lista de directorys a partir do
+void reconstruirListaDeDiretorios(ListaDiretorio **listaDiretorios) { 
+    FILE *file = fopen("./util/mapping/listdirectorys.dat", "rb"); 
+    if (file == NULL) { 
+        printf("Lista de diretorios não existe. Inicializando uma nova lista.\n"); 
+        return; 
+    } 
 
-    while (1) {
-        char nome[50];
-        // Lê um nome de diretório do arquivo
-        if (fread(nome, sizeof(char), sizeof(nome), file) != sizeof(nome)) {
-            // Sai do loop ao atingir o final do arquivo ou em caso de erro
-            break;
+    char nome[100]; // Buffer para armazenar o nome do diretório
+    while (fread(nome, sizeof(char), sizeof(nome), file) == sizeof(nome)) { 
+        // Cria um novo nó para a lista 
+        ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio)); 
+        if (novoDiretorio == NULL) { 
+            printf("Erro ao alocar memoria para o diretório.\n"); 
+            fclose(file); 
+            return; 
+        } 
+
+        // Copia o nome lido para o novo nó 
+        strcpy(novoDiretorio->nome, nome); 
+        novoDiretorio->next = NULL;
+
+        if (*listaDiretorios == NULL) { 
+            // Lista está vazia, insere como o primeiro nó
+            *listaDiretorios = novoDiretorio; 
+            novoDiretorio->prev = NULL; // Ajuste para lista duplamente encadeada, se necessário
+        } else { 
+            // Procura o último nó da lista
+            ListaDiretorio *temp = *listaDiretorios; 
+            while (temp->next != NULL) { 
+                temp = temp->next; 
+            } 
+            // Insere no final da lista
+            temp->next = novoDiretorio; 
+            novoDiretorio->prev = temp; // Ajuste para lista duplamente encadeada, se necessário
         }
-
-        // Cria um novo nó para a lista
-        ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio));
-        if (novoDiretorio == NULL) {
-            printf("Erro ao alocar memória para o diretório.\n");
-            fclose(file);
-            return;
-        }
-
-        // Copia o nome lido para o novo nó
-        strcpy(novoDiretorio->nome, nome);
-        novoDiretorio->next = *listaDiretorios;
-
-        // Caso seja lista duplamente encadeada
-        // novoDiretorio->prev = NULL;
-        // if (*listaDiretorios != NULL) {
-        //     (*listaDiretorios)->prev = novoDiretorio;
-        // }
-
-        *listaDiretorios = novoDiretorio;
-    }
-
-    fclose(file);
-    printf("Lista de diretórios carregada com sucesso.\n");
+    } 
+    fclose(file); 
+    printf("Lista de diretorios carregada com sucesso.\n"); 
 }
-
 
 /*
     Se for a primeira vez rodando o programa, ele cria o root para a navegacao entre diretórios
@@ -260,7 +259,7 @@ void construirHome(ListaDiretorio **listaDiretorios, ListaINode **listaInodes, u
         // Adicionar inode à lista de inodes
         ListaINode *novoINode = (ListaINode *)malloc(sizeof(ListaINode));
         if (novoINode == NULL) {
-            printf("Erro ao alocar memória para a lista de inodes.\n");
+            printf("Erro ao alocar memoria para a lista de inodes.\n");
             free(inodeHome);
             return;
         }
@@ -271,7 +270,7 @@ void construirHome(ListaDiretorio **listaDiretorios, ListaINode **listaInodes, u
         // Adicionar diretório à lista de diretórios
         ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio));
         if (novoDiretorio == NULL) {
-            printf("Erro ao alocar memória para a lista de diretórios.\n");
+            printf("Erro ao alocar memoria para a lista de diretórios.\n");
             free(inodeHome);
             return;
         }
@@ -283,7 +282,7 @@ void construirHome(ListaDiretorio **listaDiretorios, ListaINode **listaInodes, u
 
         printf("Diretorio raiz 'home' criado com sucesso.\n");
     } else {
-        printf("Diretorio raiz 'home' já existe.\n");
+        printf("Diretorio raiz 'home' ja existe.\n");
     }
 }
 
@@ -331,7 +330,7 @@ void mostrarInodesLivres(const unsigned char *mapaDeBits, size_t tamanho) {
 
     for (size_t i = 0; i < tamanho * 8; i++) {
         if (((mapaDeBits[i / 8] >> (i % 8)) & 1) == 0) {
-            printf("Bloco |%zu| ->\t", i);
+            printf("Bloco|%zu|->\t", i);
             encontrouLivres = 1;
         }
     }
@@ -348,7 +347,7 @@ void mostrarInodesOcupados(const unsigned char *mapaDeBits, size_t tamanho) {
 
     for (size_t i = 0; i < tamanho * 8; i++) {
         if ((mapaDeBits[i / 8] >> (i % 8)) & 1) {
-            printf("Bloco |%zu| -> \t", i);
+            printf("Bloco|%zu|-> \t", i);
             encontrouOcupados = 1;
         }
     }
@@ -465,12 +464,14 @@ int statusBloco(int indice, unsigned char *mapaDeBits) {
     return -1; // invalido
 }
 
-
+/*
+    COMANDOS
+*/
 /*
     Comando cat, ler e escrever
 */
 void escreverArquivo(char *arquivo_txt, ListaINode **listaInodes, unsigned char *mapaDeBits) {
-    printf("Digite o texto para o arquivo (Ctrl+D para finalizar):\n");
+    printf("Digite o texto para o arquivo (Ctrl+z + Ctrl+z + enter para finalizar):\n");
 
     INode *inode = criarINode(arquivo_txt, "A");
     if (inode == NULL) {
@@ -554,17 +555,109 @@ void comandoCat(char *arquivo_txt, int escrever, ListaINode **listaInodes, unsig
 /*
     Comando mkdir
 */
-void comandoMkdir(char *nome_diretorio, ListaINode **listaInodes, unsigned char *mapaDeBits, ListaDiretorio **listaDiretorio) {
-    INode *inode = criarINode(nome_diretorio, "D");
-    if (inode == NULL) {
+void comandoMkdir(char *nomeDiretorio, ListaDiretorio **listaDiretorios, ListaINode **listaInodes, unsigned char *mapaDeBits) {
+    // Verifica se o diretório já existe
+    if(strcmp(nomeDiretorio, "\0") == 1){
+        printf("Diretorio sem nome não pode ser criado.\n");
+        return;
+    }
+
+    ListaDiretorio *atual = *listaDiretorios;
+    while (atual != NULL) {
+        if (strcmp(atual->nome, nomeDiretorio) == 0) {
+            printf("Erro: Diretorio '%s' ja existe.\n", nomeDiretorio);
+            return;
+        }
+        atual = atual->next;
+    }
+
+    // Cria um novo inode para o diretório
+    INode *novoInode = criarINode(nomeDiretorio, "D");
+    if (novoInode == NULL) {
         printf("Erro ao criar inode para o diretório.\n");
         return;
     }
 
-    ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
-    novo->inode = inode;
-    novo->next = *listaInodes;
-    *listaInodes = novo;
+    // Adiciona o novo inode no final da lista de inodes
+    ListaINode *novoINodeItem = (ListaINode *)malloc(sizeof(ListaINode));
+    novoINodeItem->inode = novoInode;
+    novoINodeItem->next = NULL;
 
-    printf("Diretório %s criado com sucesso.\n", nome_diretorio);
+    if (*listaInodes == NULL) {
+        *listaInodes = novoINodeItem;
+    } else {
+        ListaINode *inodeAtual = *listaInodes;
+        while (inodeAtual->next != NULL) {
+            inodeAtual = inodeAtual->next;
+        }
+        inodeAtual->next = novoINodeItem;
+    }
+
+    // Cria o novo item para a lista de diretórios
+    ListaDiretorio *novoDiretorio = (ListaDiretorio *)malloc(sizeof(ListaDiretorio));
+    strcpy(novoDiretorio->nome, nomeDiretorio);
+    novoDiretorio->inode = novoInode;
+    novoDiretorio->next = NULL;
+    novoDiretorio->prev = NULL;
+
+    // Adiciona o novo diretório no final da lista de diretórios
+    if (*listaDiretorios == NULL) {
+        *listaDiretorios = novoDiretorio;
+    } else {
+        ListaDiretorio *diretorioAtual = *listaDiretorios;
+        while (diretorioAtual->next != NULL) {
+            diretorioAtual = diretorioAtual->next;
+        }
+        diretorioAtual->next = novoDiretorio;
+        novoDiretorio->prev = diretorioAtual;
+    }
+
+    printf("Diretorio '%s' criado com sucesso.\n", nomeDiretorio);
 }
+
+/*
+    comando ls
+*/
+void comandoLs(ListaDiretorio *listaDiretorios, ListaINode *listaInodes) {
+    printf("Diretorios:\n");
+    while (listaDiretorios != NULL) {
+        printf("  [D] %s\n", listaDiretorios->nome);
+        listaDiretorios = listaDiretorios->next;
+    }
+
+    printf("Arquivos:\n");
+    while (listaInodes != NULL) {
+        if (strcmp(listaInodes->inode->tipo, "A") == 0) {
+            printf("  [A] %s\n", listaInodes->inode->descricao);
+        }
+        listaInodes = listaInodes->next;
+    }
+}
+
+// /*
+//     comando cd
+// */
+// int mudarDiretorio(char *local, char *destino, ListaDiretorio *listaDiretorios) {
+//     if (strcmp(destino, "..") == 0) { // Subir um nível na hierarquia
+//         char *ultimo = strrchr(local, '/');
+//         if (ultimo) {
+//             *ultimo = '\0'; // Remove o último segmento do caminho
+//         } else {
+//             strcpy(local, "home"); // Se já estiver em "home", não sobe mais
+//         }
+//         return 1;
+//     } else {
+//         // Verificar se o diretório existe na estrutura
+//         ListaDiretorio *atual = listaDiretorios;
+//         while (atual != NULL) {
+//             if (strcmp(atual->nome, destino) == 0 && strcmp(atual->pai, local) == 0) {
+//                 strcat(local, "/");
+//                 strcat(local, destino);
+//                 return 1;
+//             }
+//             atual = atual->me;
+//         }
+//         printf("Diretorio '%s' nao encontrado.\n", destino);
+//         return 0;
+//     }
+// }

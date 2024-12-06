@@ -95,7 +95,7 @@ int main(){
         } else if (strcmp(comando, "directorylist") == 0) { // mostrar lista de diretorios
             listarDiretorios(listaDiretorios);
         } else if(strcmp(comando, "mkdir") == 0) { // criar diretorio
-
+            comandoMkdir(destino, &listaDiretorios, &listaInodes, mapaDeBits);
         } else if(strcmp(comando, "mv") == 0) { // mover arquivo
 
         } else if(strcmp(comando, "rm") == 0) { // remover arquivo
@@ -103,13 +103,9 @@ int main(){
         } else if(strcmp(comando, "rmdir") == 0) { // remover diretorio
 
         } else if(strcmp(comando, "ls") == 0) { // listar arquivos
-
+            comandoLs(listaDiretorios, listaInodes);
         } else {
             printf("comando %s nao reconhecido no sistema!\n", comando);
         }
     } while (saida != 1);
-
-    if (mapaDeBits != NULL) {
-        free(mapaDeBits);
-    }
 }
