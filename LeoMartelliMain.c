@@ -60,7 +60,7 @@ int main(){
         // printf("comando: %s, destino: %s", comando, destino);
 
         if(strcmp(comando, "cd") == 0){ // cd
-            // strcpy(local, destino);
+            printf("\nnao implementado");
         } else if (strcmp(comando, "exit") == 0) {
             saida = 1;
 
@@ -95,7 +95,11 @@ int main(){
         } else if (strcmp(comando, "directorylist") == 0) { // mostrar lista de diretorios
             listarDiretorios(listaDiretorios);
         } else if(strcmp(comando, "mkdir") == 0) { // criar diretorio
-            comandoMkdir(destino, &listaDiretorios, &listaInodes, mapaDeBits);
+            if (strlen(destino) > 0) {
+                comandoMkdir(destino, &listaDiretorios, &listaInodes, mapaDeBits);
+            } else {
+                printf("Erro: Nome do diretorio nao especificado.\n");
+            }
         } else if(strcmp(comando, "mv") == 0) { // mover arquivo
 
         } else if(strcmp(comando, "rm") == 0) { // remover arquivo

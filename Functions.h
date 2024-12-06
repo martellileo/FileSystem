@@ -82,8 +82,16 @@ void reconstruirListaDeInodes(ListaINode **listaInodes, unsigned char *mapaDeBit
             }
 
             novo->inode = inode;
-            novo->next = *listaInodes;
-            *listaInodes = novo;
+            novo->next = NULL;
+            if (*listaInodes == NULL) {
+                *listaInodes = novo;
+            } else {
+                ListaINode *temp = *listaInodes;
+                while (temp->next != NULL) {
+                    temp = temp->next;
+                }
+                temp->next = novo;
+            }
 
             // atualiza o mapa de bits
             for (int i = 0; i < totalBlocks; i++) {
@@ -471,7 +479,7 @@ int statusBloco(int indice, unsigned char *mapaDeBits) {
     Comando cat, ler e escrever
 */
 void escreverArquivo(char *arquivo_txt, ListaINode **listaInodes, unsigned char *mapaDeBits) {
-    printf("Digite o texto para o arquivo (Ctrl+z + Ctrl+z + enter para finalizar):\n");
+    printf("Digite o texto para o arquivo (enter + Ctrl+z + Ctrl+z + enter para finalizar):\n");
 
     INode *inode = criarINode(arquivo_txt, "A");
     if (inode == NULL) {
@@ -482,7 +490,7 @@ void escreverArquivo(char *arquivo_txt, ListaINode **listaInodes, unsigned char 
     char buffer[tfCluster];
     int bloco_index = 0;
 
-    // le o texto do usuario e divide em blocos
+    // lê o texto do usuário e divide em blocos
     while (fgets(buffer, tfCluster, stdin)) {
         int bloco_id = alocarBloco(mapaDeBits);
         if (bloco_id == -1) {
@@ -497,21 +505,37 @@ void escreverArquivo(char *arquivo_txt, ListaINode **listaInodes, unsigned char 
         strncpy(bloco.dados, buffer, tfCluster);
         criarDAT(bloco, bloco_id);
 
-        // linka com o inode
+        // vincula com o inode
         inode->blocos[bloco_index++] = bloco;
 
-        // verifica se ta lotado
+        // verifica se está lotado
         if (bloco_index >= totalBlocks) {
             printf("Limite de blocos do arquivo atingido.\n");
             break;
         }
     }
 
-    // seta na lista
+    // insere o inode no final da lista
     ListaINode *novo = (ListaINode *)malloc(sizeof(ListaINode));
+    if (novo == NULL) {
+        printf("Erro ao alocar memória para a lista de inodes.\n");
+        free(inode);
+        return;
+    }
     novo->inode = inode;
-    novo->next = *listaInodes;
-    *listaInodes = novo;
+    novo->next = NULL;
+
+    if (*listaInodes == NULL) {
+        // Caso a lista esteja vazia, o novo inode será o primeiro
+        *listaInodes = novo;
+    } else {
+        // Percorre até o final da lista e adiciona o novo inode
+        ListaINode *atual = *listaInodes;
+        while (atual->next != NULL) {
+            atual = atual->next;
+        }
+        atual->next = novo;
+    }
 
     printf("Arquivo %s salvo com sucesso.\n", arquivo_txt);
 }
@@ -634,30 +658,6 @@ void comandoLs(ListaDiretorio *listaDiretorios, ListaINode *listaInodes) {
     }
 }
 
-// /*
-//     comando cd
-// */
-// int mudarDiretorio(char *local, char *destino, ListaDiretorio *listaDiretorios) {
-//     if (strcmp(destino, "..") == 0) { // Subir um nível na hierarquia
-//         char *ultimo = strrchr(local, '/');
-//         if (ultimo) {
-//             *ultimo = '\0'; // Remove o último segmento do caminho
-//         } else {
-//             strcpy(local, "home"); // Se já estiver em "home", não sobe mais
-//         }
-//         return 1;
-//     } else {
-//         // Verificar se o diretório existe na estrutura
-//         ListaDiretorio *atual = listaDiretorios;
-//         while (atual != NULL) {
-//             if (strcmp(atual->nome, destino) == 0 && strcmp(atual->pai, local) == 0) {
-//                 strcat(local, "/");
-//                 strcat(local, destino);
-//                 return 1;
-//             }
-//             atual = atual->me;
-//         }
-//         printf("Diretorio '%s' nao encontrado.\n", destino);
-//         return 0;
-//     }
-// }
+/*
+    comando cd
+*/
